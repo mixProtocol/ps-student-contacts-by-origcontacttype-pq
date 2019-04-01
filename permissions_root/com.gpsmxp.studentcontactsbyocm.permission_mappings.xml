@@ -1,6 +1,0 @@
-<permission_mappings>
-  <permission name='/admin/students/contacts.html'>
-      <implies allow="post">/ws/schema/query/com.gpsmxp.students.contacts.byOrigContactType</implies>
-      <implies allow="post">/ws/schema/query/com.gpsmxp.students.contacts.byOrigContactTypePrimary3EmailPhone</implies>
-  </permission>
-</permission_mappings>
