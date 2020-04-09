@@ -409,6 +409,8 @@ GROUP BY studentDcid, enrollStat, studentNum, lname, fname, studentEmail,
             <column column="Students.SchoolId">Student_SchoolId</column>
             <column column="Students.Grade_Level">Student_Grade_Level</column>
             <column column="Students.Home_Room">Student_Home_Room</column>
+            <column column="Students.Next_School">Student_Next_School</column>
+            <column column="Students.Sched_NextYearGrade">Student_NextYearGrade</column>
             <column column="Students.Home_Phone">Student_Home_Phone</column>
             <column column="Students.Student_Number">Mother_Relationship</column>
             <column column="Students.Student_Number">Mother_FirstName</column>
@@ -451,7 +453,8 @@ GROUP BY studentDcid, enrollStat, studentNum, lname, fname, studentEmail,
 			<![CDATA[				
 SELECT
   studentDcid, enrollStat, studentNum, lname, fname, studentEmail, 
-  gender, schoolNum, gradeLvl, homeRm, studentHomePhone,
+  gender, schoolNum, gradeLvl, homeRm, nextSchool, nextGrade, 
+  studentHomePhone,
 
   MIN(CASE WHEN (contactType='mother') THEN contactRelationshipType END) AS MotherRelationshipType,
   MIN(CASE WHEN (contactType='mother') THEN contactFirstName END) AS MotherFirstName,
@@ -515,6 +518,8 @@ FROM ( SELECT
   s.SchoolID AS schoolNum,
   s.Grade_Level AS gradeLvl,
   s.Home_room AS homeRm,
+  s.Next_School AS nextSchool,
+  s.Sched_NextYearGrade AS nextGrade,
   s.Home_Phone AS studentHomePhone,
   csrel.Code AS contactRelationshipType, 
   scd.IsCustodial AS contactIsCustodialFlg,
@@ -574,7 +579,7 @@ WHERE (LOWER(ocm.OriginalContactType) IN ('mother','father','guardian')
 )
 
 GROUP BY studentDcid, enrollStat, studentNum, lname, fname, studentEmail, 
-  gender, schoolNum, gradeLvl, homeRm, studentHomePhone
+  gender, schoolNum, gradeLvl, homeRm, nextSchool, nextGrade, studentHomePhone
 
 			]]>
         </sql>
