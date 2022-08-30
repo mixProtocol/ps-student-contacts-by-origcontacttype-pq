@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+  ],
+  "settings": {
+		"files.associations": {
+			"*.content.footer.txt": "html",
+			"*.content.header.txt": "html",
+			"*.student.alert.txt": "html",
+      "*.sqlReport.txt": "xml",
+      "*.sql.txt" : "plsql"
+		}
+	}
+}
