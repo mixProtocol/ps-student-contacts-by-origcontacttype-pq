@@ -126,15 +126,18 @@ FROM Students s
 LEFT OUTER JOIN 
   ( PSM_StudentContact psc 
   
-    INNER JOIN PSM_StudentContactType psct ON psc.StudentContactTypeId= psct.Id 
-      AND psct.Name='Self' 
+    INNER JOIN PSM_StudentContactType psct
+            ON psc.StudentContactTypeId= psct.Id 
+           AND psct.Name='Self' 
   
     INNER JOIN Sync_StudentMap ssm ON psc.StudentId = ssm.StudentId
+    
   ) ON s.Dcid = ssm.StudentsDcid 
 
-LEFT OUTER JOIN OriginalContactAssoc oca_m1
-  ON s.Dcid = oca_m1.StudentDcid
- AND oca_m1.OriginalContactType LIKE 'mother'
+LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_m1
 
-LEFT OUTER JOIN ContactInfo ci_m1
-  ON oca_m1.PersonId = ci_m1.PersonId
+    INNER JOIN  ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
+
+  ) ON s.Dcid = oca_m1.StudentDcid
+   AND oca_m1.OriginalContactType LIKE 'mother'
