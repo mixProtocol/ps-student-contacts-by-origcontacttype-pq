@@ -21,7 +21,7 @@ WITH
     LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
     LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
   ), 
-  ContactDetails AS (
+  ContactInfo AS (
     SELECT
       p.Id AS PersonId,
       p.FirstName AS contactFirstName,
@@ -96,30 +96,30 @@ SELECT
   s.Mailing_State AS studentMailAddrState,
   s.Mailing_Zip as studentMailAddrZip,
 
-  csrel.Code AS contactRelationshipType, 
-  scd.IsCustodial AS contactIsCustodialFlg,
-  scd.IsEmergency AS contactIsEmergencyFlg,
-  scd.LivesWithFlg AS contactLivesWithFlg,
-  scd.ReceivesMailFlg AS contactReceivesMailFlg,
-  scd.SchoolPickupFlg AS contactSchoolPickupFlg,
+  oca_m1.contactRelationshipType AS contactRelationshipType, 
+  oca_m1.contactIsCustodialFlg AS contactIsCustodialFlg,
+  oca_m1.contactIsEmergencyFlg AS contactIsEmergencyFlg,
+  oca_m1.contactLivesWithFlg AS contactLivesWithFlg,
+  oca_m1.contactReceivesMailFlg AS contactReceivesMailFlg,
+  oca_m1.contactSchoolPickupFlg AS contactSchoolPickupFlg,
 
-  p.FirstName AS contactFirstName,
-  p.MiddleName AS contactMiddleName,
-  p.LastName AS contactLastName,
-  LOWER(ocm.OriginalContactType) AS contactType,
-  LOWER(cspt.Code) AS phoneType,
-  ppna.PhoneNumberAsEntered AS contactPhoneNum,
-  ppna.PhoneNumberPriorityOrder,
-  LOWER(cset.Code) AS emailType,
-  emad.EmailAddress as contactEmailAddr,
-  peaa.EmailAddressPriorityOrder,
-  peaa.IsPrimaryEmailAddress,
-  pad.Street AS contactAddrStreet,
-  pad.Unit AS contactAddrUnit,
-  pad.LineTwo AS contactAddrLineTwo,
-  pad.City AS contactAddrCity,
-  csas.Code AS contactAddrState,
-  pad.PostalCode as contactAddrPostalCode
+  ci_m1.contactFirstName AS contactFirstName,
+  ci_m1.contactMiddleName AS contactMiddleName,
+  ci_m1.contactLastName AS contactLastName,
+  oca_m1.OriginalContactType AS contactType,
+  ci_m1.phoneType AS phoneType,
+  ci_m1.contactPhoneNum AS contactPhoneNum,
+  ci_m1.PhoneNumberPriorityOrder,
+  ci_m1.emailType AS emailType,
+  ci_m1.contactEmailAddr AS contactEmailAddr,
+  ci_m1.EmailAddressPriorityOrder,
+  ci_m1.IsPrimaryEmailAddress,
+  ci_m1.contactAddrStreet AS contactAddrStreet,
+  ci_m1.contactAddrUnit AS contactAddrUnit,
+  ci_m1.contactAddrLineTwo AS contactAddrLineTwo,
+  ci_m1.contactAddrCity AS contactAddrCity,
+  ci_m1.contactAddrState AS contactAddrState,
+  ci_m1.contactAddrPostalCode as contactAddrPostalCode
 
 FROM Students s
 
@@ -131,6 +131,15 @@ LEFT OUTER JOIN
   
     INNER JOIN Sync_StudentMap ssm ON psc.StudentId = ssm.StudentId
   ) ON s.Dcid = ssm.StudentsDcid 
+
+LEFT OUTER JOIN OriginalContactAssoc oca_m1
+  ON s.Dcid = oca_m1.StudentDcid
+ AND oca_m1.OriginalContactType LIKE 'mother'
+
+LEFT OUTER JOIN ContactInfo ci_m1
+  ON oca_m1.PersonId = ci_m1.PersonId
+
+  
 
 LEFT OUTER JOIN StudentContactAssoc sca ON s.Dcid = sca.StudentDcid
 LEFT OUTER JOIN Person p ON sca.PersonId = p.id
