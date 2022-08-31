@@ -3,7 +3,7 @@ WITH
     SELECT
       sca.StudentDcid AS StudentDcid,
       sca.PersonId AS PersonId,
-      LOWER(ocm.OriginalContactType) AS OriginalContactType,
+      ocm.OriginalContactType AS OriginalContactType,
       csrel.Code AS contactRelationshipType, 
       scd.IsCustodial AS contactIsCustodialFlg,
       scd.IsEmergency AS contactIsEmergencyFlg,
@@ -15,8 +15,8 @@ WITH
 
     JOIN OriginalContactMap ocm
       ON sca.StudentContactAssocid = ocm.StudentContactAssocId
-    AND ocm.OriginalContactType IN ('mother','father','guardian',
-                                    'emergency1','emergency2','emergency3')
+     AND ocm.OriginalContactType IN ('mother','father','guardian',
+                                     'emergency1','emergency2','emergency3')
     
     LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
     LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
