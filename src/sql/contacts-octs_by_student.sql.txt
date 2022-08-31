@@ -15,15 +15,31 @@ WITH
 
     JOIN OriginalContactMap ocm
       ON sca.StudentContactAssocid = ocm.StudentContactAssocId
-    AND LOWER(ocm.OriginalContactType) IN ('mother','father','guardian',
-                                            'emergency1','emergency2','emergency3')
+    AND ocm.OriginalContactType IN ('mother','father','guardian',
+                                    'emergency1','emergency2','emergency3')
     
     LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
     LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
   ), 
   ContactDetails AS (
     SELECT
-      p.Id AS PersonId
+      p.Id AS PersonId,
+      p.FirstName AS contactFirstName,
+      p.MiddleName AS contactMiddleName,
+      p.LastName AS contactLastName,
+      LOWER(cspt.Code) AS phoneType,
+      ppna.PhoneNumberAsEntered AS contactPhoneNum,
+      ppna.PhoneNumberPriorityOrder,
+      LOWER(cset.Code) AS emailType,
+      emad.EmailAddress as contactEmailAddr,
+      peaa.EmailAddressPriorityOrder,
+      peaa.IsPrimaryEmailAddress,
+      pad.Street AS contactAddrStreet,
+      pad.Unit AS contactAddrUnit,
+      pad.LineTwo AS contactAddrLineTwo,
+      pad.City AS contactAddrCity,
+      csas.Code AS contactAddrState,
+      pad.PostalCode as contactAddrPostalCode
 
     FROM Person p
     
@@ -80,12 +96,14 @@ SELECT
   s.Mailing_City AS studentMailAddrCity,
   s.Mailing_State AS studentMailAddrState,
   s.Mailing_Zip as studentMailAddrZip,
+
   csrel.Code AS contactRelationshipType, 
   scd.IsCustodial AS contactIsCustodialFlg,
   scd.IsEmergency AS contactIsEmergencyFlg,
   scd.LivesWithFlg AS contactLivesWithFlg,
   scd.ReceivesMailFlg AS contactReceivesMailFlg,
   scd.SchoolPickupFlg AS contactSchoolPickupFlg,
+
   p.FirstName AS contactFirstName,
   p.MiddleName AS contactMiddleName,
   p.LastName AS contactLastName,
