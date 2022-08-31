@@ -1,4 +1,65 @@
- SELECT
+WITH 
+  OriginalContactAssoc AS (
+    SELECT
+      sca.StudentDcid AS StudentDcid,
+      sca.PersonId AS PersonId,
+      LOWER(ocm.OriginalContactType) AS OriginalContactType,
+      csrel.Code AS contactRelationshipType, 
+      scd.IsCustodial AS contactIsCustodialFlg,
+      scd.IsEmergency AS contactIsEmergencyFlg,
+      scd.LivesWithFlg AS contactLivesWithFlg,
+      scd.ReceivesMailFlg AS contactReceivesMailFlg,
+      scd.SchoolPickupFlg AS contactSchoolPickupFlg
+    
+    FROM StudentContactAssoc sca
+
+    JOIN OriginalContactMap ocm
+      ON sca.StudentContactAssocid = ocm.StudentContactAssocId
+    AND LOWER(ocm.OriginalContactType) IN ('mother','father','guardian',
+                                            'emergency1','emergency2','emergency3')
+    
+    LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
+    LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
+  ), 
+  ContactDetails AS (
+    SELECT
+      p.Id AS PersonId
+
+    FROM Person p
+    
+    LEFT OUTER JOIN PersonPhoneNumberAssoc ppna ON  p.Id = ppna.PersonId
+    LEFT OUTER JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
+    LEFT OUTER JOIN CodeSet cspt
+      ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
+     AND (LOWER(cspt.Code) IN ('home','mobile','work') OR cspt.Code IS NULL)
+
+    LEFT OUTER JOIN PersonEmailAddressAssoc peaa ON  p.Id = peaa.PersonId
+    LEFT OUTER JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
+    LEFT OUTER JOIN CodeSet cset
+      ON peaa.EmailTypeCodeSetID = cset.CodeSetID
+     AND (LOWER(cset.Code) IN ('current') OR cset.Code IS NULL)
+
+    LEFT OUTER JOIN PersonAddressAssoc paa ON  p.Id = paa.PersonId
+    LEFT OUTER JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
+    LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
+    LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
+
+    WHERE ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
+           (p.Id, ppna.PhoneTypeCodeSetID, (ppna.PhoneNumberPriorityOrder - (ppna.IsPreferred * 100000)))
+             IN (SELECT PersonId, PhoneTypeCodeSetID, MIN(PhoneNumberPriorityOrder - (IsPreferred * 100000))
+                FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
+
+      AND (peaa.PersonEmailAddressAssocId IS NULL OR
+          (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
+            IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
+                FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
+      
+      AND (paa.PersonAddressAssocId IS NULL OR
+          (p.Id, paa.AddressTypeCodeSetID, paa.AddressPriorityOrder)
+            IN (SELECT PersonId, AddressTypeCodeSetID, MIN(AddressPriorityOrder)
+                FROM PersonAddressAssoc GROUP BY PersonId, AddressTypeCodeSetID))
+  )
+SELECT
   s.Dcid As studentDcid,
   s.Enroll_Status AS enrollStat,
   s.Student_Number AS studentNum,
