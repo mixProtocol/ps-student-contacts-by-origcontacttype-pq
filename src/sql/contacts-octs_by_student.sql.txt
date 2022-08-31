@@ -44,7 +44,8 @@ WITH
     LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
     LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
 
-    WHERE ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
+    WHERE p.ID IN (SELECT PersonID FROM OriginalContactAssoc)
+      AND ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
            (p.Id, ppna.PhoneTypeCodeSetID, (ppna.PhoneNumberPriorityOrder - (ppna.IsPreferred * 100000)))
              IN (SELECT PersonId, PhoneTypeCodeSetID, MIN(PhoneNumberPriorityOrder - (IsPreferred * 100000))
                 FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
