@@ -60,21 +60,20 @@ WITH
     LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
     LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
 
-    WHERE p.ID IN (SELECT PersonID FROM OriginalContactAssoc)
-      AND ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
+    WHERE ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
            (p.Id, ppna.PhoneTypeCodeSetID, (ppna.PhoneNumberPriorityOrder - (ppna.IsPreferred * 100000)))
              IN (SELECT PersonId, PhoneTypeCodeSetID, MIN(PhoneNumberPriorityOrder - (IsPreferred * 100000))
-                FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
+                 FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
 
-      AND (peaa.PersonEmailAddressAssocId IS NULL OR
-          (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
-            IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
-                FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
+      AND ((peaa.PersonEmailAddressAssocId IS NULL) OR
+           (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
+             IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
+                 FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
       
-      AND (paa.PersonAddressAssocId IS NULL OR
-          (p.Id, paa.AddressTypeCodeSetID, paa.AddressPriorityOrder)
-            IN (SELECT PersonId, AddressTypeCodeSetID, MIN(AddressPriorityOrder)
-                FROM PersonAddressAssoc GROUP BY PersonId, AddressTypeCodeSetID))
+      AND ((paa.PersonAddressAssocId IS NULL) OR
+           (p.Id, paa.AddressTypeCodeSetID, paa.AddressPriorityOrder)
+             IN (SELECT PersonId, AddressTypeCodeSetID, MIN(AddressPriorityOrder)
+                 FROM PersonAddressAssoc GROUP BY PersonId, AddressTypeCodeSetID))
   )
 SELECT
   s.Dcid As studentDcid,
