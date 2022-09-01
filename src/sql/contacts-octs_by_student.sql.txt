@@ -29,7 +29,7 @@ WITH
       ppna.PhoneNumberPriorityOrder AS PhoneNumberPriorityOrder,
       ppna.PhoneNumberAsEntered AS PhoneNumberAsEntered,
       ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, cspt.Code
-                            ORDER BY ppna.IsPreferred DESC,
+                             ORDER BY ppna.IsPreferred DESC,
                                       ppna.PhoneNumberPriorityOrder ASC,
                                       ppna.PhoneNumberAsEntered) AS PhonePriByType
     
@@ -40,7 +40,6 @@ WITH
       
     JOIN CodeSet cspt
       ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
-     AND cspt.Code COLLATE binary_ci IN ('home','mobile','work')
   ),
   ContactInfo AS (
     SELECT
@@ -64,6 +63,10 @@ WITH
 
     FROM Person p
     
+    LEFT OUTER JOIN PrimPersPhonesByType pppbt
+                 ON p.Id = pppbt.PersonId
+                AND pppbt.phoneType COLLATE binary_ci IN ('home','mobile','work')
+
     LEFT OUTER JOIN PersonPhoneNumberAssoc ppna ON  p.Id = ppna.PersonId
     LEFT OUTER JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
     LEFT OUTER JOIN CodeSet cspt
