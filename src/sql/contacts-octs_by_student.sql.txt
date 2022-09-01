@@ -61,6 +61,7 @@ WITH
         INNER JOIN CodeSet cspt
                 ON pppbt.PhoneTypeCodeSetID = cspt.CodeSetID
                AND cspt.Code COLLATE binary_ci IN ('home','mobile','work')
+               AND PhonePriByType = 1
 
       ) ON p.Id = pppbt.PersonId
 
@@ -150,4 +151,5 @@ LEFT OUTER JOIN
     INNER JOIN  ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
 
   ) ON s.Dcid = oca_m1.StudentDcid
-   AND oca_m1.OriginalContactType LIKE 'mother'
+   AND oca_m1.OriginalContactType IN ('mother','father','guardian')
+   AND ci_m1.contactLastName LIKE '%Walke%'
