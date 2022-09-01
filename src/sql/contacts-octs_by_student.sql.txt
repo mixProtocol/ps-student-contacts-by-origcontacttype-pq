@@ -23,15 +23,15 @@ WITH
   ),
   PrimPersPhonesByType AS (
     SELECT
-    ppna.PersonId AS PersonId,
-    cspt.Code AS phoneType,
-    ppna.IsPreferred AS IsPreferred,
-    ppna.PhoneNumberPriorityOrder AS PhoneNumberPriorityOrder,
-    ppna.PhoneNumberAsEntered AS PhoneNumberAsEntered,
-    ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, cspt.Code
-                           ORDER BY ppna.IsPreferred DESC,
-                                    ppna.PhoneNumberPriorityOrder ASC,
-                                    ppna.PhoneNumberAsEntered) AS PhonePriByType
+      ppna.PersonId AS PersonId,
+      cspt.Code AS phoneType,
+      ppna.IsPreferred AS IsPreferred,
+      ppna.PhoneNumberPriorityOrder AS PhoneNumberPriorityOrder,
+      ppna.PhoneNumberAsEntered AS PhoneNumberAsEntered,
+      ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, cspt.Code
+                            ORDER BY ppna.IsPreferred DESC,
+                                      ppna.PhoneNumberPriorityOrder ASC,
+                                      ppna.PhoneNumberAsEntered) AS PhonePriByType
     
     FROM PersonPhoneNumberAssoc ppna
 
