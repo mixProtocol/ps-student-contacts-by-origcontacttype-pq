@@ -37,9 +37,6 @@ WITH
 
     JOIN PhoneNumber pn
       ON ppna.PhoneNumberId = pn.PhoneNumberID
-      
-    JOIN CodeSet cspt
-      ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
   ),
   ContactInfo AS (
     SELECT
