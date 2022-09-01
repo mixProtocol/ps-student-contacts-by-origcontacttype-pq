@@ -20,7 +20,28 @@ WITH
     
     LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
     LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
-  ), 
+  ),
+  PrimPersPhonesByType AS (
+    SELECT
+    ppna.PersonId,
+    cspt.Code AS phoneType,
+    ppna.IsPreferred,
+    ppna.PhoneNumberPriorityOrder,
+    ppna.PhoneNumberAsEntered,
+    ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, cspt.Code
+                        ORDER BY ppna.IsPreferred DESC,
+                                 ppna.PhoneNumberPriorityOrder ASC,
+                                 ppna.PhoneNumberAsEntered) AS PhonePriByType
+    
+    FROM PersonPhoneNumberAssoc ppna
+
+    JOIN PhoneNumber pn
+      ON ppna.PhoneNumberId = pn.PhoneNumberID
+      
+    JOIN CodeSet cspt
+      ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
+    AND cspt.Code COLLATE binary_ci IN ('home','mobile','work')
+  ),
   ContactInfo AS (
     SELECT
       p.Id AS PersonId,
