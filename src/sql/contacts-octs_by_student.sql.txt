@@ -24,11 +24,11 @@ WITH
   PrimPersPhonesByType AS (
     SELECT
       ppna.PersonId AS PersonId,
-      cspt.Code AS phoneType,
+      ppna.PhoneTypeCodeSetID AS PhoneTypeCodeSetID,
       ppna.IsPreferred AS IsPreferred,
       ppna.PhoneNumberPriorityOrder AS PhoneNumberPriorityOrder,
       ppna.PhoneNumberAsEntered AS PhoneNumberAsEntered,
-      ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, cspt.Code
+      ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, ppna.PhoneTypeCodeSetID
                              ORDER BY ppna.IsPreferred DESC,
                                       ppna.PhoneNumberPriorityOrder ASC,
                                       ppna.PhoneNumberAsEntered) AS PhonePriByType
@@ -48,8 +48,8 @@ WITH
       p.MiddleName AS contactMiddleName,
       p.LastName AS contactLastName,
       LOWER(cspt.Code) AS phoneType,
-      ppna.PhoneNumberAsEntered AS contactPhoneNum,
-      ppna.PhoneNumberPriorityOrder,
+      pppbt.PhoneNumberAsEntered AS contactPhoneNum,
+      pppbt.PhoneNumberPriorityOrder,
       LOWER(cset.Code) AS emailType,
       emad.EmailAddress as contactEmailAddr,
       peaa.EmailAddressPriorityOrder,
@@ -63,15 +63,14 @@ WITH
 
     FROM Person p
     
-    LEFT OUTER JOIN PrimPersPhonesByType pppbt
-                 ON p.Id = pppbt.PersonId
-                AND pppbt.phoneType COLLATE binary_ci IN ('home','mobile','work')
+    LEFT OUTER JOIN
+      ( PrimPersPhonesByType pppbt
 
-    LEFT OUTER JOIN PersonPhoneNumberAssoc ppna ON  p.Id = ppna.PersonId
-    LEFT OUTER JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
-    LEFT OUTER JOIN CodeSet cspt
-      ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
-     AND (LOWER(cspt.Code) IN ('home','mobile','work') OR cspt.Code IS NULL)
+        INNER JOIN CodeSet cspt
+                ON pppbt.PhoneTypeCodeSetID = cspt.CodeSetID
+               AND cspt.Code COLLATE binary_ci IN ('home','mobile','work')
+
+      ) ON p.Id = pppbt.PersonId
 
     LEFT OUTER JOIN PersonEmailAddressAssoc peaa ON  p.Id = peaa.PersonId
     LEFT OUTER JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
@@ -84,12 +83,7 @@ WITH
     LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
     LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
 
-    WHERE ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
-           (p.Id, ppna.PhoneTypeCodeSetID, (ppna.PhoneNumberPriorityOrder - (ppna.IsPreferred * 100000)))
-             IN (SELECT PersonId, PhoneTypeCodeSetID, MIN(PhoneNumberPriorityOrder - (IsPreferred * 100000))
-                 FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
-
-      AND ((peaa.PersonEmailAddressAssocId IS NULL) OR
+    WHERE ((peaa.PersonEmailAddressAssocId IS NULL) OR
            (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
              IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
                  FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
