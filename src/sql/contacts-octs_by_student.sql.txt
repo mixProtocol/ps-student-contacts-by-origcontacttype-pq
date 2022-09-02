@@ -33,6 +33,31 @@ WITH
 
     JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
   ),
+  PrimPersEmailAddr AS (
+    SELECT
+      peaa.PersonId AS PersonId,
+      peaa.EmailTypeCodeSetID AS EmailTypeCodeSetID,
+      peaa.IsPrimaryEmailAddress AS IsPrimaryEmailAddress,
+      peaa.EmailAddressPriorityOrder AS EmailAddressPriorityOrder,
+      emad.EmailAddress AS EmailAddress,
+      ROW_NUMBER() OVER (PARTITION BY peaa.PersonId
+                             ORDER BY peaa.IsPrimaryEmailAddress DESC,
+                                      CASE
+                                        WHEN cset.Code IS NULL THEN 2
+                                        WHEN cset.Code LIKE '' THEN 2
+                                        WHEN cset.Code COLLATE binary_ci LIKE 'Current' THEN 1
+                                        WHEN cset.Code COLLATE binary_ci LIKE 'Additional' THEN 3
+                                        ELSE 4
+                                      END,
+                                      peaa.EmailAddressPriorityOrder ASC) AS EmailPri
+
+    FROM PersonEmailAddressAssoc peaa
+
+    JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
+
+    LEFT OUTER JOIN CodeSet cset ON peaa.EmailTypeCodeSetID = cset.CodeSetID
+
+  ),
   ContactInfo AS (
     SELECT
       p.Id AS PersonId,
