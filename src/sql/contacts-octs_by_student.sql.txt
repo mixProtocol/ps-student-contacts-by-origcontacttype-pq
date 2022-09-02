@@ -45,18 +45,19 @@ WITH
                                       CASE
                                         WHEN cset.Code IS NULL THEN 2
                                         WHEN cset.Code LIKE '' THEN 2
-                                        WHEN cset.Code COLLATE binary_ci LIKE 'Current' THEN 1
-                                        WHEN cset.Code COLLATE binary_ci LIKE 'Additional' THEN 3
-                                        ELSE 4
-                                      END,
+                                        ELSE 1
+                                      END ASC,
                                       peaa.EmailAddressPriorityOrder ASC) AS EmailPri
 
     FROM PersonEmailAddressAssoc peaa
 
     JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
 
-    LEFT OUTER JOIN CodeSet cset ON peaa.EmailTypeCodeSetID = cset.CodeSetID
-
+    LEFT OUTER JOIN CodeSet cset
+                 ON peaa.EmailTypeCodeSetID = cset.CodeSetID
+                AND cset.Code COLLATE binary_ci LIKE 'Current'
+    
+    ORDER BY peaa.PersonId
   ),
   ContactInfo AS (
     SELECT
@@ -68,9 +69,9 @@ WITH
       pppbt.PhoneNumberAsEntered AS contactPhoneNum,
       pppbt.PhoneNumberPriorityOrder,
       LOWER(cset.Code) AS emailType,
-      emad.EmailAddress as contactEmailAddr,
-      peaa.EmailAddressPriorityOrder,
-      peaa.IsPrimaryEmailAddress,
+      ppea.EmailAddress as contactEmailAddr,
+      ppea.EmailAddressPriorityOrder,
+      ppea.IsPrimaryEmailAddress,
       pad.Street AS contactAddrStreet,
       pad.Unit AS contactAddrUnit,
       pad.LineTwo AS contactAddrLineTwo,
@@ -85,27 +86,25 @@ WITH
 
         INNER JOIN CodeSet cspt
                 ON pppbt.PhoneTypeCodeSetID = cspt.CodeSetID
-               AND cspt.Code COLLATE binary_ci IN ('home','mobile','work')
-               AND PhonePriByType = 1
+               AND cspt.Code COLLATE binary_ci IN ('Home','Mobile','Work')
 
       ) ON p.Id = pppbt.PersonId
+       AND pppbt.PhonePriByType = 1
+    
+    LEFT OUTER JOIN
+      ( PrimPersEmailAddr ppea
 
-    LEFT OUTER JOIN PersonEmailAddressAssoc peaa ON  p.Id = peaa.PersonId
-    LEFT OUTER JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
-    LEFT OUTER JOIN CodeSet cset
-      ON peaa.EmailTypeCodeSetID = cset.CodeSetID
-     AND (LOWER(cset.Code) IN ('current') OR cset.Code IS NULL)
+        INNER JOIN CodeSet cset
+                ON ppea.EmailTypeCodeSetID = cset.CodeSetID
 
+      ) ON ppea.PersonId = p.Id
+       AND EmailPri = 1
+      
     LEFT OUTER JOIN PersonAddressAssoc paa ON  p.Id = paa.PersonId
     LEFT OUTER JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
     LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
     LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
 
-    WHERE ((peaa.PersonEmailAddressAssocId IS NULL) OR
-           (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
-             IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
-                 FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
-      
       AND ((paa.PersonAddressAssocId IS NULL) OR
            (p.Id, paa.AddressTypeCodeSetID, paa.AddressPriorityOrder)
              IN (SELECT PersonId, AddressTypeCodeSetID, MIN(AddressPriorityOrder)
