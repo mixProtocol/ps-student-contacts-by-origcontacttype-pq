@@ -59,6 +59,29 @@ WITH
     
     ORDER BY peaa.PersonId
   ),
+  PrimPersStreetAddr As(
+    SELECT
+      paa.PersonId AS PersonId,
+      paa.AddressTypeCodeSetID AS AddressTypeCodeSetID,
+      paa.AddressPriorityOrder AS AddressPriorityOrder,
+   
+      pad.Street AS contactAddrStreet,
+      pad.Unit AS contactAddrUnit,
+      pad.LineTwo AS contactAddrLineTwo,
+      pad.City AS contactAddrCity,
+      csas.Code AS contactAddrState,
+      pad.PostalCode as contactAddrPostalCode,
+      ROW_NUMBER() OVER (PARTITION BY paa.PersonId
+                             ORDER BY paa.AddressPriorityOrder ASC) AS StreetAddrPri
+
+    FROM PersonAddressAssoc paa
+    
+    JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
+    JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
+    
+    WHERE (paa.EndDate IS NULL OR paa.EndDate > SYSDATE)
+      AND (paa.StartDate IS NULL OR paa.StartDate <= SYSDATE)
+  ),
   ContactInfo AS (
     SELECT
       p.Id AS PersonId,
