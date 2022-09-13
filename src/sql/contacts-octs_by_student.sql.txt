@@ -88,9 +88,9 @@ WITH
       p.FirstName AS contactFirstName,
       p.MiddleName AS contactMiddleName,
       p.LastName AS contactLastName,
-      LOWER(cspt.Code) AS phoneType,
-      pppbt.PhoneNumberAsEntered AS contactPhoneNum,
-      pppbt.PhoneNumberPriorityOrder,
+      pppbt_home.PhoneNumberAsEntered AS HomePhoneNum,
+      pppbt_mobile.PhoneNumberAsEntered AS MobilePhoneNum,
+      pppbt_work.PhoneNumberAsEntered AS WorkPhoneNum,
       LOWER(cset.Code) AS emailType,
       ppea.EmailAddress as contactEmailAddr,
       ppea.EmailAddressPriorityOrder,
@@ -106,14 +106,34 @@ WITH
     FROM Person p
     
     LEFT OUTER JOIN
-      ( PrimPersPhonesByType pppbt
+      ( PrimPersPhonesByType pppbt_home
 
-        INNER JOIN CodeSet cspt
-                ON pppbt.PhoneTypeCodeSetID = cspt.CodeSetID
-               AND cspt.Code COLLATE binary_ci IN ('Home','Mobile','Work')
+        INNER JOIN CodeSet cspt_home
+                ON pppbt_home.PhoneTypeCodeSetID = cspt_home.CodeSetID
+               AND cspt_home.Code COLLATE binary_ci LIKE 'Home'
 
-      ) ON p.Id = pppbt.PersonId
-       AND pppbt.PhonePriByType = 1
+      ) ON p.Id = pppbt_home.PersonId
+       AND pppbt_home.PhonePriByType = 1
+
+    LEFT OUTER JOIN
+      ( PrimPersPhonesByType pppbt_mobile
+
+        INNER JOIN CodeSet cspt_mobile
+                ON pppbt_mobile.PhoneTypeCodeSetID = cspt_mobile.CodeSetID
+               AND cspt_mobile.Code COLLATE binary_ci LIKE 'Mobile'
+
+      ) ON p.Id = pppbt_mobile.PersonId
+       AND pppbt_mobile.PhonePriByType = 1
+
+    LEFT OUTER JOIN
+      ( PrimPersPhonesByType pppbt_work
+
+        INNER JOIN CodeSet pppbt_work
+                ON pppbt_work.PhoneTypeCodeSetID = pppbt_work.CodeSetID
+               AND pppbt_work.Code COLLATE binary_ci LIKE 'Work'
+
+      ) ON p.Id = pppbt_work.PersonId
+       AND pppbt_work.PhonePriByType = 1
     
     LEFT OUTER JOIN
       ( PrimPersEmailAddr ppea
@@ -154,30 +174,29 @@ SELECT
   s.Mailing_State AS studentMailAddrState,
   s.Mailing_Zip as studentMailAddrZip,
 
-  oca_m1.contactRelationshipType AS contactRelationshipType, 
-  oca_m1.contactIsCustodialFlg AS contactIsCustodialFlg,
-  oca_m1.contactIsEmergencyFlg AS contactIsEmergencyFlg,
-  oca_m1.contactLivesWithFlg AS contactLivesWithFlg,
-  oca_m1.contactReceivesMailFlg AS contactReceivesMailFlg,
-  oca_m1.contactSchoolPickupFlg AS contactSchoolPickupFlg,
+  oca_m1.contactRelationshipType AS MotherRelationshipType, 
 
-  ci_m1.contactFirstName AS contactFirstName,
-  ci_m1.contactMiddleName AS contactMiddleName,
-  ci_m1.contactLastName AS contactLastName,
-  oca_m1.OriginalContactType AS contactType,
-  ci_m1.phoneType AS phoneType,
-  ci_m1.contactPhoneNum AS contactPhoneNum,
-  ci_m1.PhoneNumberPriorityOrder,
-  ci_m1.emailType AS emailType,
-  ci_m1.contactEmailAddr AS contactEmailAddr,
-  ci_m1.EmailAddressPriorityOrder,
-  ci_m1.IsPrimaryEmailAddress,
-  ci_m1.contactAddrStreet AS contactAddrStreet,
-  ci_m1.contactAddrUnit AS contactAddrUnit,
-  ci_m1.contactAddrLineTwo AS contactAddrLineTwo,
-  ci_m1.contactAddrCity AS contactAddrCity,
-  ci_m1.contactAddrState AS contactAddrState,
-  ci_m1.contactAddrPostalCode as contactAddrPostalCode
+  ci_m1.contactFirstName AS MotherFirstName,
+  ci_m1.contactMiddleName AS MotherMiddleName,
+  ci_m1.contactLastName AS MotherLastName,
+
+  oca_m1.contactIsCustodialFlg AS MotherIsCustodialFlg,
+  oca_m1.contactIsEmergencyFlg AS MotherIsEmergencyFlg,
+  oca_m1.contactLivesWithFlg AS MotherLivesWithFlg,
+  oca_m1.contactReceivesMailFlg AS MotherReceivesMailFlg,
+  oca_m1.contactSchoolPickupFlg AS MotherSchoolPickupFlg,
+ 
+  ci_m1.emailType AS MotherEmailAddrType,
+  ci_m1.contactEmailAddr AS MotherEmailAddress,
+  ci_m1.HomePhoneNum AS MotherHomePhone,
+  ci_m1.MobilePhoneNum AS MotherMobilePhone,
+  ci_m1.WorkPhoneNum AS MotherWorkPhone,
+  ci_m1.contactAddrStreet AS MotherAddrStreet,
+  ci_m1.contactAddrUnit AS MotherAddrUnit,
+  ci_m1.contactAddrLineTwo AS MotherAddrLineTwo,
+  ci_m1.contactAddrCity AS MotherAddrCity,
+  ci_m1.contactAddrState AS MotherAddrState,
+  ci_m1.contactAddrPostalCode as MotherAddrPostalCode
 
 FROM Students s
 
@@ -198,5 +217,4 @@ LEFT OUTER JOIN
     INNER JOIN  ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
 
   ) ON s.Dcid = oca_m1.StudentDcid
-   AND oca_m1.OriginalContactType IN ('mother','father','guardian')
-   AND ci_m1.contactLastName LIKE '%Walke%'
+   AND oca_m1.OriginalContactType LIKE 'mother'
