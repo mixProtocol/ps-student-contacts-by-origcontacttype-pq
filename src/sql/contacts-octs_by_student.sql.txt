@@ -95,6 +95,7 @@ WITH
       ppea.EmailAddress as contactEmailAddr,
       ppea.EmailAddressPriorityOrder,
       ppea.IsPrimaryEmailAddress,
+      LOWER(csat.Code) AS addressType,
       pad.Street AS contactAddrStreet,
       pad.Unit AS contactAddrUnit,
       pad.LineTwo AS contactAddrLineTwo,
@@ -120,18 +121,17 @@ WITH
         INNER JOIN CodeSet cset
                 ON ppea.EmailTypeCodeSetID = cset.CodeSetID
 
-      ) ON ppea.PersonId = p.Id
-       AND EmailPri = 1
-      
-    LEFT OUTER JOIN PersonAddressAssoc paa ON  p.Id = paa.PersonId
-    LEFT OUTER JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
-    LEFT OUTER JOIN CodeSet csat ON paa.AddressTypeCodeSetID = csat.CodeSetID
-    LEFT OUTER JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
+      ) ON p.Id = ppea.PersonId
+       AND ppea.EmailPri = 1
 
-      AND ((paa.PersonAddressAssocId IS NULL) OR
-           (p.Id, paa.AddressTypeCodeSetID, paa.AddressPriorityOrder)
-             IN (SELECT PersonId, AddressTypeCodeSetID, MIN(AddressPriorityOrder)
-                 FROM PersonAddressAssoc GROUP BY PersonId, AddressTypeCodeSetID))
+    LEFT OUTER JOIN 
+      ( PrimPersStreetAddr ppsa
+        
+        INNER JOIN CodeSet csat
+                ON paa.AddressTypeCodeSetID = csat.CodeSetID
+
+      ) ON p.Id = ppsa.PersonId
+       AND ppsa.StreetAddrPri = 1
   )
 SELECT
   s.Dcid As studentDcid,
