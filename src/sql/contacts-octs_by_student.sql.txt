@@ -96,12 +96,12 @@ WITH
       ppea.EmailAddressPriorityOrder,
       ppea.IsPrimaryEmailAddress,
       LOWER(csat.Code) AS addressType,
-      pad.Street AS contactAddrStreet,
-      pad.Unit AS contactAddrUnit,
-      pad.LineTwo AS contactAddrLineTwo,
-      pad.City AS contactAddrCity,
-      csas.Code AS contactAddrState,
-      pad.PostalCode as contactAddrPostalCode
+      ppsa.contactAddrStreet AS contactAddrStreet,
+      ppsa.contactAddrUnit AS contactAddrUnit,
+      ppsa.contactAddrLineTwo AS contactAddrLineTwo,
+      ppsa.contactAddrCity AS contactAddrCity,
+      ppsa.contactAddrState AS contactAddrState,
+      ppsa.contactAddrPostalCode as contactAddrPostalCode
 
     FROM Person p
     
@@ -128,7 +128,7 @@ WITH
       ( PrimPersStreetAddr ppsa
         
         INNER JOIN CodeSet csat
-                ON paa.AddressTypeCodeSetID = csat.CodeSetID
+                ON ppsa.AddressTypeCodeSetID = csat.CodeSetID
 
       ) ON p.Id = ppsa.PersonId
        AND ppsa.StreetAddrPri = 1
