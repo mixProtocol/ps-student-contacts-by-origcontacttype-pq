@@ -144,8 +144,7 @@ WITH
     LEFT OUTER JOIN
       ( PrimPersEmailAddr ppea
 
-        INNER JOIN CodeSet cset
-                ON ppea.EmailTypeCodeSetID = cset.CodeSetID
+        INNER JOIN CodeSet cset ON ppea.EmailTypeCodeSetID = cset.CodeSetID
 
       ) ON p.Id = ppea.PersonId
        AND ppea.EmailPri = 1
@@ -153,8 +152,7 @@ WITH
     LEFT OUTER JOIN 
       ( PrimPersStreetAddr ppsa
         
-        INNER JOIN CodeSet csat
-                ON ppsa.AddressTypeCodeSetID = csat.CodeSetID
+        INNER JOIN CodeSet csat ON ppsa.AddressTypeCodeSetID = csat.CodeSetID
 
       ) ON p.Id = ppsa.PersonId
        AND ppsa.StreetAddrPri = 1
@@ -181,18 +179,14 @@ SELECT
   s.Mailing_Zip as studentMailAddrZip,
 
   oca_m1.contactRelationshipType AS MotherRelationshipType, 
-
   ci_m1.contactFirstName AS MotherFirstName,
   ci_m1.contactMiddleName AS MotherMiddleName,
   ci_m1.contactLastName AS MotherLastName,
-
   oca_m1.contactIsCustodialFlg AS MotherIsCustodialFlg,
   oca_m1.contactIsEmergencyFlg AS MotherIsEmergencyFlg,
   oca_m1.contactLivesWithFlg AS MotherLivesWithFlg,
   oca_m1.contactReceivesMailFlg AS MotherReceivesMailFlg,
   oca_m1.contactSchoolPickupFlg AS MotherSchoolPickupFlg,
- 
-  ci_m1.emailType AS MotherEmailAddrType,
   ci_m1.contactEmailAddr AS MotherEmailAddress,
   ci_m1.HomePhoneNum AS MotherHomePhone,
   ci_m1.MobilePhoneNum AS MotherMobilePhone,
@@ -202,8 +196,48 @@ SELECT
   ci_m1.contactAddrLineTwo AS MotherAddrLineTwo,
   ci_m1.contactAddrCity AS MotherAddrCity,
   ci_m1.contactAddrState AS MotherAddrState,
-  ci_m1.contactAddrPostalCode as MotherAddrPostalCode
-
+  ci_m1.contactAddrPostalCode as MotherAddrPostalCode,
+  
+  oca_f2.contactRelationshipType AS FatherRelationshipType, 
+  ci_f2.contactFirstName AS FatherFirstName,
+  ci_f2.contactMiddleName AS FatherMiddleName,
+  ci_f2.contactLastName AS FatherLastName,
+  oca_f2.contactIsCustodialFlg AS FatherIsCustodialFlg,
+  oca_f2.contactIsEmergencyFlg AS FatherIsEmergencyFlg,
+  oca_f2.contactLivesWithFlg AS FatherLivesWithFlg,
+  oca_f2.contactReceivesMailFlg AS FatherReceivesMailFlg,
+  oca_f2.contactSchoolPickupFlg AS FatherSchoolPickupFlg,
+  ci_f2.contactEmailAddr AS FatherEmailAddress,
+  ci_f2.HomePhoneNum AS FatherHomePhone,
+  ci_f2.MobilePhoneNum AS FatherMobilePhone,
+  ci_f2.WorkPhoneNum AS FatherWorkPhone,
+  ci_f2.contactAddrStreet AS FatherAddrStreet,
+  ci_f2.contactAddrUnit AS FatherAddrUnit,
+  ci_f2.contactAddrLineTwo AS FatherAddrLineTwo,
+  ci_f2.contactAddrCity AS FatherAddrCity,
+  ci_f2.contactAddrState AS FatherAddrState,
+  ci_f2.contactAddrPostalCode AS FatherAddrPostalCode,
+    
+  oca_g3.contactRelationshipType AS GuardianRelationshipType, 
+  ci_g3.contactFirstName AS GuardianFirstName,
+  ci_g3.contactMiddleName AS GuardianMiddleName,
+  ci_g3.contactLastName AS GuardianLastName,
+  oca_g3.contactIsCustodialFlg AS GuardianIsCustodialFlg,
+  oca_g3.contactIsEmergencyFlg AS GuardianIsEmergencyFlg,
+  oca_g3.contactLivesWithFlg AS GuardianLivesWithFlg,
+  oca_g3.contactReceivesMailFlg AS GuardianReceivesMailFlg,
+  oca_g3.contactSchoolPickupFlg AS GuardianSchoolPickupFlg,
+  ci_g3.contactEmailAddr AS GuardianEmailAddress,
+  ci_g3.HomePhoneNum AS GuardianHomePhone,
+  ci_g3.MobilePhoneNum AS GuardianMobilePhone,
+  ci_g3.WorkPhoneNum AS GuardianWorkPhone,
+  ci_g3.contactAddrStreet AS GuardianAddrStreet,
+  ci_g3.contactAddrUnit AS GuardianAddrUnit,
+  ci_g3.contactAddrLineTwo AS GuardianAddrLineTwo,
+  ci_g3.contactAddrCity AS GuardianAddrCity,
+  ci_g3.contactAddrState AS GuardianAddrState,
+  ci_g3.contactAddrPostalCode AS GuardianAddrPostalCode
+    
 FROM Students s
 
 LEFT OUTER JOIN 
@@ -211,7 +245,7 @@ LEFT OUTER JOIN
   
     INNER JOIN PSM_StudentContactType psct
             ON psc.StudentContactTypeId= psct.Id 
-           AND psct.Name='Self' 
+           AND psct.Name COLLATE binary_ci LIKE 'Self' 
   
     INNER JOIN Sync_StudentMap ssm ON psc.StudentId = ssm.StudentId
     
@@ -220,7 +254,23 @@ LEFT OUTER JOIN
 LEFT OUTER JOIN
   ( OriginalContactAssoc oca_m1
 
-    INNER JOIN  ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
+    INNER JOIN ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
 
   ) ON s.Dcid = oca_m1.StudentDcid
-   AND oca_m1.OriginalContactType LIKE 'mother'
+   AND oca_m1.OriginalContactType COLLATE binary_ci LIKE 'mother'
+
+ LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_f2
+
+    INNER JOIN ContactInfo ci_f2 ON oca_f2.PersonId = ci_f2.PersonId
+
+  ) ON s.Dcid = oca_f2.StudentDcid
+   AND oca_f2.OriginalContactType COLLATE binary_ci LIKE 'father'  
+ 
+ LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_g3
+
+    INNER JOIN ContactInfo ci_g3 ON oca_g3.PersonId = ci_g3.PersonId
+
+  ) ON s.Dcid = oca_g3.StudentDcid
+   AND oca_g3.OriginalContactType COLLATE binary_ci LIKE 'guardian'  
