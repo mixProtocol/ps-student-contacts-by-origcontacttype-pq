@@ -14,8 +14,14 @@ WITH
     FROM StudentContactAssoc sca
 
     JOIN OriginalContactMap ocm ON sca.StudentContactAssocid = ocm.StudentContactAssocId
-    LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
-    LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
+    
+    JOIN StudentContactDetail scd
+      ON sca.StudentContactAssocId = scd.StudentContactAssocId
+     AND scd.IsActive = 1
+     AND (scd.EndDate IS NULL OR scd.EndDate > SYSDATE)
+     AND (scd.StartDate IS NULL OR scd.StartDate <= SYSDATE)
+    
+    JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
   ),
   PrimPersPhonesByType AS (
     SELECT
