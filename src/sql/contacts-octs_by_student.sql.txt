@@ -1,4 +1,4 @@
-WITH 
+WITH
   OriginalContactAssoc AS (
     SELECT
       sca.StudentDcid AS StudentDcid,
@@ -18,8 +18,8 @@ WITH
     JOIN StudentContactDetail scd
       ON sca.StudentContactAssocId = scd.StudentContactAssocId
      AND scd.IsActive = 1
-     AND (scd.EndDate IS NULL OR scd.EndDate > SYSDATE)
-     AND (scd.StartDate IS NULL OR scd.StartDate <= SYSDATE)
+     AND (scd.EndDate IS NULL OR scd.EndDate > (SELECT SYSTIMESTAMP FROM Dual))
+     AND (scd.StartDate IS NULL OR scd.StartDate <= (SELECT SYSTIMESTAMP FROM Dual))
     
     JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
   ),
@@ -61,7 +61,7 @@ WITH
 
     LEFT OUTER JOIN CodeSet cset
                  ON peaa.EmailTypeCodeSetID = cset.CodeSetID
-                AND cset.Code COLLATE binary_ci LIKE 'Current'
+                AND cset.Code LIKE 'Current'
     
     ORDER BY peaa.PersonId
   ),
@@ -85,8 +85,8 @@ WITH
     JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
     JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
     
-    WHERE (paa.EndDate IS NULL OR paa.EndDate > SYSDATE)
-      AND (paa.StartDate IS NULL OR paa.StartDate <= SYSDATE)
+    WHERE (paa.EndDate IS NULL OR paa.EndDate > (SELECT SYSTIMESTAMP FROM Dual))
+      AND (paa.StartDate IS NULL OR paa.StartDate <= (SELECT SYSTIMESTAMP FROM Dual))
   ),
   ContactInfo AS (
     SELECT
@@ -112,37 +112,37 @@ WITH
     FROM Person p
     
     LEFT OUTER JOIN
-      ( PrimPersPhonesByType pppbt_home
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_home
 
         INNER JOIN CodeSet cspt_home
                 ON pppbt_home.PhoneTypeCodeSetID = cspt_home.CodeSetID
-               AND cspt_home.Code COLLATE binary_ci LIKE 'Home'
+               AND cspt_home.Code LIKE 'Home'
 
       ) ON p.Id = pppbt_home.PersonId
        AND pppbt_home.PhonePriByType = 1
 
     LEFT OUTER JOIN
-      ( PrimPersPhonesByType pppbt_mobile
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_mobile
 
         INNER JOIN CodeSet cspt_mobile
                 ON pppbt_mobile.PhoneTypeCodeSetID = cspt_mobile.CodeSetID
-               AND cspt_mobile.Code COLLATE binary_ci LIKE 'Mobile'
+               AND cspt_mobile.Code LIKE 'Mobile'
 
       ) ON p.Id = pppbt_mobile.PersonId
        AND pppbt_mobile.PhonePriByType = 1
 
     LEFT OUTER JOIN
-      ( PrimPersPhonesByType pppbt_work
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_work
 
         INNER JOIN CodeSet pppbt_work
                 ON pppbt_work.PhoneTypeCodeSetID = pppbt_work.CodeSetID
-               AND pppbt_work.Code COLLATE binary_ci LIKE 'Work'
+               AND pppbt_work.Code LIKE 'Work'
 
       ) ON p.Id = pppbt_work.PersonId
        AND pppbt_work.PhonePriByType = 1
     
     LEFT OUTER JOIN
-      ( PrimPersEmailAddr ppea
+      ( (SELECT * FROM PrimPersEmailAddr) ppea
 
         INNER JOIN CodeSet cset ON ppea.EmailTypeCodeSetID = cset.CodeSetID
 
@@ -150,7 +150,7 @@ WITH
        AND ppea.EmailPri = 1
 
     LEFT OUTER JOIN 
-      ( PrimPersStreetAddr ppsa
+      ( (SELECT * FROM PrimPersStreetAddr) ppsa
         
         INNER JOIN CodeSet csat ON ppsa.AddressTypeCodeSetID = csat.CodeSetID
 
@@ -300,7 +300,6 @@ SELECT
   ci_e3.contactAddrState AS Emergency3AddrState,
   ci_e3.contactAddrPostalCode AS Emergency3AddrPostalCode
     
-    
 FROM Students s
 
 LEFT OUTER JOIN 
@@ -308,56 +307,56 @@ LEFT OUTER JOIN
   
     INNER JOIN PSM_StudentContactType psct
             ON psc.StudentContactTypeId= psct.Id 
-           AND psct.Name COLLATE binary_ci LIKE 'Self' 
+           AND psct.Name LIKE 'Self' 
   
     INNER JOIN Sync_StudentMap ssm ON psc.StudentId = ssm.StudentId
     
   ) ON s.Dcid = ssm.StudentsDcid 
 
 LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_m1
+  ( (SELECT * FROM OriginalContactAssoc) oca_m1
 
-    INNER JOIN ContactInfo ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
 
   ) ON s.Dcid = oca_m1.StudentDcid
-   AND oca_m1.OriginalContactType COLLATE binary_ci LIKE 'mother'
+   AND oca_m1.OriginalContactType LIKE 'mother'
 
  LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_f2
+  ( (SELECT * FROM OriginalContactAssoc) oca_f2
 
-    INNER JOIN ContactInfo ci_f2 ON oca_f2.PersonId = ci_f2.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_f2 ON oca_f2.PersonId = ci_f2.PersonId
 
   ) ON s.Dcid = oca_f2.StudentDcid
-   AND oca_f2.OriginalContactType COLLATE binary_ci LIKE 'father'  
+   AND oca_f2.OriginalContactType LIKE 'father'  
  
  LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_g3
+  ( (SELECT * FROM OriginalContactAssoc) oca_g3
 
-    INNER JOIN ContactInfo ci_g3 ON oca_g3.PersonId = ci_g3.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_g3 ON oca_g3.PersonId = ci_g3.PersonId
 
   ) ON s.Dcid = oca_g3.StudentDcid
-   AND oca_g3.OriginalContactType COLLATE binary_ci LIKE 'guardian'
+   AND oca_g3.OriginalContactType LIKE 'guardian'
 
 LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_e1
+  ( (SELECT * FROM OriginalContactAssoc) oca_e1
 
-    INNER JOIN ContactInfo ci_e1 ON oca_e1.PersonId = ci_e1.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_e1 ON oca_e1.PersonId = ci_e1.PersonId
 
   ) ON s.Dcid = oca_e1.StudentDcid
-   AND oca_e1.OriginalContactType COLLATE binary_ci LIKE 'emergency1'
+   AND oca_e1.OriginalContactType LIKE 'emergency1'
 
  LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_e2
+  ( (SELECT * FROM OriginalContactAssoc) oca_e2
 
-    INNER JOIN ContactInfo ci_e2 ON oca_e2.PersonId = ci_e2.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_e2 ON oca_e2.PersonId = ci_e2.PersonId
 
   ) ON s.Dcid = oca_e2.StudentDcid
-   AND oca_e2.OriginalContactType COLLATE binary_ci LIKE 'emergency2'
+   AND oca_e2.OriginalContactType LIKE 'emergency2'
  
  LEFT OUTER JOIN
-  ( OriginalContactAssoc oca_e3
+  ( (SELECT * FROM OriginalContactAssoc) oca_e3
 
-    INNER JOIN ContactInfo ci_e3 ON oca_e3.PersonId = ci_e3.PersonId
+    INNER JOIN (SELECT * FROM ContactInfo) ci_e3 ON oca_e3.PersonId = ci_e3.PersonId
 
   ) ON s.Dcid = oca_e3.StudentDcid
-   AND oca_e3.OriginalContactType COLLATE binary_ci LIKE 'emergency3'
+   AND oca_e3.OriginalContactType LIKE 'emergency3'
