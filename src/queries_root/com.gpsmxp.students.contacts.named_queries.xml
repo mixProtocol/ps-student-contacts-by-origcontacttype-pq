@@ -535,6 +535,7 @@ ORDER BY s.Student_Number ASC, s.Dcid ASC
             <column column="Students.Student_Number">Mother_IsEmergency</column>
             <column column="Students.Student_Number">Mother_LivesWith</column>
             <column column="Students.Student_Number">Mother_ReceivesMail</column>
+            <column column="Students.Student_Number">Mother_SchoolPickup</column>
             <column column="Students.Student_Number">Mother_EmailAddress</column>
             <column column="Students.Student_Number">Mother_HomePhone</column>
             <column column="Students.Student_Number">Mother_MobilePhone</column>
@@ -547,6 +548,7 @@ ORDER BY s.Student_Number ASC, s.Dcid ASC
             <column column="Students.Student_Number">Father_IsEmergency</column>
             <column column="Students.Student_Number">Father_LivesWith</column>
             <column column="Students.Student_Number">Father_ReceivesMail</column>
+            <column column="Students.Student_Number">Father_SchoolPickup</column>
             <column column="Students.Student_Number">Father_EmailAddress</column>
             <column column="Students.Student_Number">Father_HomePhone</column>
             <column column="Students.Student_Number">Father_MobilePhone</column>
@@ -559,6 +561,7 @@ ORDER BY s.Student_Number ASC, s.Dcid ASC
             <column column="Students.Student_Number">Guardian_IsEmergency</column>
             <column column="Students.Student_Number">Guardian_LivesWith</column>
             <column column="Students.Student_Number">Guardian_ReceivesMail</column>
+            <column column="Students.Student_Number">Guardian_SchoolPickup</column>
             <column column="Students.Student_Number">Guardian_EmailAddress</column>
             <column column="Students.Student_Number">Guardian_HomePhone</column>
             <column column="Students.Student_Number">Guardian_MobilePhone</column>
@@ -566,73 +569,166 @@ ORDER BY s.Student_Number ASC, s.Dcid ASC
  		      </columns>
         <sql>
 			<![CDATA[				
+WITH
+  OriginalContactAssoc AS (
+    SELECT
+      sca.StudentDcid AS StudentDcid,
+      sca.PersonId AS PersonId,
+      ocm.OriginalContactType AS OriginalContactType,
+      csrel.Code AS contactRelationshipType, 
+      scd.IsCustodial AS contactIsCustodialFlg,
+      scd.IsEmergency AS contactIsEmergencyFlg,
+      scd.LivesWithFlg AS contactLivesWithFlg,
+      scd.ReceivesMailFlg AS contactReceivesMailFlg,
+      scd.SchoolPickupFlg AS contactSchoolPickupFlg
+    
+    FROM StudentContactAssoc sca
+
+    JOIN OriginalContactMap ocm ON sca.StudentContactAssocid = ocm.StudentContactAssocId
+    
+    JOIN StudentContactDetail scd
+      ON sca.StudentContactAssocId = scd.StudentContactAssocId
+     AND scd.IsActive = 1
+     AND (scd.EndDate IS NULL OR scd.EndDate > (SELECT SYSTIMESTAMP FROM Dual))
+     AND (scd.StartDate IS NULL OR scd.StartDate <= (SELECT SYSTIMESTAMP FROM Dual))
+    
+    JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
+  ),
+  PrimPersPhonesByType AS (
+    SELECT
+      ppna.PersonId AS PersonId,
+      ppna.PhoneTypeCodeSetID AS PhoneTypeCodeSetID,
+      ppna.IsPreferred AS IsPreferred,
+      ppna.PhoneNumberPriorityOrder AS PhoneNumberPriorityOrder,
+      ppna.PhoneNumberAsEntered AS PhoneNumberAsEntered,
+      ROW_NUMBER() OVER (PARTITION BY ppna.PersonId, ppna.PhoneTypeCodeSetID
+                             ORDER BY ppna.IsPreferred DESC,
+                                      ppna.PhoneNumberPriorityOrder ASC,
+                                      ppna.PhoneNumberAsEntered) AS PhonePriByType
+    
+    FROM PersonPhoneNumberAssoc ppna
+
+    JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
+  ),
+  PrimPersEmailAddr AS (
+    SELECT
+      peaa.PersonId AS PersonId,
+      peaa.EmailTypeCodeSetID AS EmailTypeCodeSetID,
+      peaa.IsPrimaryEmailAddress AS IsPrimaryEmailAddress,
+      peaa.EmailAddressPriorityOrder AS EmailAddressPriorityOrder,
+      emad.EmailAddress AS EmailAddress,
+      ROW_NUMBER() OVER (PARTITION BY peaa.PersonId
+                             ORDER BY peaa.IsPrimaryEmailAddress DESC,
+                                      CASE
+                                        WHEN cset.Code IS NULL THEN 2
+                                        WHEN cset.Code LIKE '' THEN 2
+                                        ELSE 1
+                                      END ASC,
+                                      peaa.EmailAddressPriorityOrder ASC) AS EmailPri
+
+    FROM PersonEmailAddressAssoc peaa
+
+    JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
+
+    LEFT OUTER JOIN CodeSet cset
+                 ON peaa.EmailTypeCodeSetID = cset.CodeSetID
+                AND cset.Code LIKE 'Current'
+    
+    ORDER BY peaa.PersonId
+  ),
+  PrimPersStreetAddr As(
+    SELECT
+      paa.PersonId AS PersonId,
+      paa.AddressTypeCodeSetID AS AddressTypeCodeSetID,
+      paa.AddressPriorityOrder AS AddressPriorityOrder,
+   
+      pad.Street AS contactAddrStreet,
+      pad.Unit AS contactAddrUnit,
+      pad.LineTwo AS contactAddrLineTwo,
+      pad.City AS contactAddrCity,
+      csas.Code AS contactAddrState,
+      pad.PostalCode as contactAddrPostalCode,
+      ROW_NUMBER() OVER (PARTITION BY paa.PersonId
+                             ORDER BY paa.AddressPriorityOrder ASC) AS StreetAddrPri
+
+    FROM PersonAddressAssoc paa
+    
+    JOIN PersonAddress pad ON paa.PersonAddressId = pad.PersonAddressId
+    JOIN CodeSet csas ON pad.StatesCodeSetID = csas.CodeSetID
+    
+    WHERE (paa.EndDate IS NULL OR paa.EndDate > (SELECT SYSTIMESTAMP FROM Dual))
+      AND (paa.StartDate IS NULL OR paa.StartDate <= (SELECT SYSTIMESTAMP FROM Dual))
+  ),
+  ContactInfo AS (
+    SELECT
+      p.Id AS PersonId,
+      p.FirstName AS contactFirstName,
+      p.MiddleName AS contactMiddleName,
+      p.LastName AS contactLastName,
+      pppbt_home.PhoneNumberAsEntered AS HomePhoneNum,
+      pppbt_mobile.PhoneNumberAsEntered AS MobilePhoneNum,
+      pppbt_work.PhoneNumberAsEntered AS WorkPhoneNum,
+      LOWER(cset.Code) AS emailType,
+      ppea.EmailAddress as contactEmailAddr,
+      ppea.EmailAddressPriorityOrder,
+      ppea.IsPrimaryEmailAddress,
+      LOWER(csat.Code) AS addressType,
+      ppsa.contactAddrStreet AS contactAddrStreet,
+      ppsa.contactAddrUnit AS contactAddrUnit,
+      ppsa.contactAddrLineTwo AS contactAddrLineTwo,
+      ppsa.contactAddrCity AS contactAddrCity,
+      ppsa.contactAddrState AS contactAddrState,
+      ppsa.contactAddrPostalCode as contactAddrPostalCode
+
+    FROM Person p
+    
+    LEFT OUTER JOIN
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_home
+
+        INNER JOIN CodeSet cspt_home
+                ON pppbt_home.PhoneTypeCodeSetID = cspt_home.CodeSetID
+               AND cspt_home.Code LIKE 'Home'
+
+      ) ON p.Id = pppbt_home.PersonId
+       AND pppbt_home.PhonePriByType = 1
+
+    LEFT OUTER JOIN
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_mobile
+
+        INNER JOIN CodeSet cspt_mobile
+                ON pppbt_mobile.PhoneTypeCodeSetID = cspt_mobile.CodeSetID
+               AND cspt_mobile.Code LIKE 'Mobile'
+
+      ) ON p.Id = pppbt_mobile.PersonId
+       AND pppbt_mobile.PhonePriByType = 1
+
+    LEFT OUTER JOIN
+      ( (SELECT * FROM PrimPersPhonesByType) pppbt_work
+
+        INNER JOIN CodeSet pppbt_work
+                ON pppbt_work.PhoneTypeCodeSetID = pppbt_work.CodeSetID
+               AND pppbt_work.Code LIKE 'Work'
+
+      ) ON p.Id = pppbt_work.PersonId
+       AND pppbt_work.PhonePriByType = 1
+    
+    LEFT OUTER JOIN
+      ( (SELECT * FROM PrimPersEmailAddr) ppea
+
+        INNER JOIN CodeSet cset ON ppea.EmailTypeCodeSetID = cset.CodeSetID
+
+      ) ON p.Id = ppea.PersonId
+       AND ppea.EmailPri = 1
+
+    LEFT OUTER JOIN 
+      ( (SELECT * FROM PrimPersStreetAddr) ppsa
+        
+        INNER JOIN CodeSet csat ON ppsa.AddressTypeCodeSetID = csat.CodeSetID
+
+      ) ON p.Id = ppsa.PersonId
+       AND ppsa.StreetAddrPri = 1
+  )
 SELECT
-  studentDcid,
-  enrollStat,
-  studentNum,
-  lname, 
-  fname,
-  studentEmail, 
-  gender,
-  schoolNum,
-  gradeLvl,
-  homeRm,
-  nextSchool,
-  nextGrade, 
-  studentHomePhone,
-
-  MIN(CASE WHEN (contactType='mother') THEN contactRelationshipType END) AS MotherRelationshipType,
-  MIN(CASE WHEN (contactType='mother') THEN contactFirstName END) AS MotherFirstName,
-  MIN(CASE WHEN (contactType='mother') THEN contactMiddleName END) AS MotherMiddleName,
-  MIN(CASE WHEN (contactType='mother') THEN contactLastName END) AS MotherLastName,
-  MIN(CASE WHEN (contactType='mother') THEN contactIsCustodialFlg END) AS MotherIsCustodialFlg,
-  MIN(CASE WHEN (contactType='mother') THEN contactIsEmergencyFlg END) AS MotherIsEmergencyFlg,
-  MIN(CASE WHEN (contactType='mother') THEN contactLivesWithFlg END) AS MotherLivesWithFlg,
-  MIN(CASE WHEN (contactType='mother') THEN contactReceivesMailFlg END) AS MotherReceivesMailFlg,
-  MIN(CASE WHEN (contactType='mother' AND emailType='current') 
-           THEN contactEmailAddr END) AS MotherEmailAddress,
-  MIN(CASE WHEN (contactType='mother' AND phoneType='home') 
-           THEN contactPhoneNum END) AS MotherHomePhone,
-  MIN(CASE WHEN (contactType='mother' AND phoneType='mobile') 
-           THEN contactPhoneNum END) AS MotherMobilePhone,
-  MIN(CASE WHEN (contactType='mother' AND phoneType='work') 
-           THEN contactPhoneNum END) AS MotherWorkPhone,
-
-  MIN(CASE WHEN (contactType='father') THEN contactRelationshipType END) AS FatherRelationshipType,
-  MIN(CASE WHEN (contactType='father') THEN contactFirstName END) AS FatherFirstName,
-  MIN(CASE WHEN (contactType='father') THEN contactMiddleName END) AS FatherMiddleName,
-  MIN(CASE WHEN (contactType='father') THEN contactLastName END) AS FatherLastName, 
-  MIN(CASE WHEN (contactType='father') THEN contactIsCustodialFlg END) AS FatherIsCustodialFlg,
-  MIN(CASE WHEN (contactType='father') THEN contactIsEmergencyFlg END) AS FatherIsEmergencyFlg,
-  MIN(CASE WHEN (contactType='father') THEN contactLivesWithFlg END) AS FatherLivesWithFlg,
-  MIN(CASE WHEN (contactType='father') THEN contactReceivesMailFlg END) AS FatherReceivesMailFlg,
-  MIN(CASE WHEN (contactType='father' AND emailType='current') 
-           THEN contactEmailAddr END) AS FatherEmailAddress, 
-  MIN(CASE WHEN (contactType='father' AND phoneType='home') 
-           THEN contactPhoneNum END) AS FatherHomePhone,
-  MIN(CASE WHEN (contactType='father' AND phoneType='mobile') 
-           THEN contactPhoneNum END) AS FatherMobilePhone,
-  MIN(CASE WHEN (contactType='father' AND phoneType='work') 
-           THEN contactPhoneNum END) AS FatherWorkPhone, 
-
-  MIN(CASE WHEN (contactType='guardian') THEN contactRelationshipType END) AS GuardianRelationshipType,
-  MIN(CASE WHEN (contactType='guardian') THEN contactFirstName END) AS GuardianFirstName,
-  MIN(CASE WHEN (contactType='guardian') THEN contactMiddleName END) AS GuardianMiddleName,
-  MIN(CASE WHEN (contactType='guardian') THEN contactLastName END) AS GuardianLastName, 
-  MIN(CASE WHEN (contactType='guardian') THEN contactIsCustodialFlg END) AS GuardianIsCustodialFlg,
-  MIN(CASE WHEN (contactType='guardian') THEN contactIsEmergencyFlg END) AS GuardianIsEmergencyFlg,
-  MIN(CASE WHEN (contactType='guardian') THEN contactLivesWithFlg END) AS GuardianLivesWithFlg,
-  MIN(CASE WHEN (contactType='guardian') THEN contactReceivesMailFlg END) AS GuardianReceivesMailFlg,
-  MIN(CASE WHEN (contactType='guardian' AND emailType='current') 
-           THEN contactEmailAddr END) AS GuardianEmailAddress, 
-  MIN(CASE WHEN (contactType='guardian' AND phoneType='home') 
-           THEN contactPhoneNum END) AS GuardianHomePhone,
-  MIN(CASE WHEN (contactType='guardian' AND phoneType='mobile') 
-           THEN contactPhoneNum END) AS GuardianMobilePhone,
-  MIN(CASE WHEN (contactType='guardian' AND phoneType='work') 
-           THEN contactPhoneNum END) AS GuardianWorkPhone
-
-FROM ( SELECT
   s.Dcid As studentDcid,
   s.Enroll_Status AS enrollStat,
   s.Student_Number AS studentNum,
@@ -646,65 +742,113 @@ FROM ( SELECT
   s.Next_School AS nextSchool,
   s.Sched_NextYearGrade AS nextGrade,
   s.Home_Phone AS studentHomePhone,
-  csrel.Code AS contactRelationshipType, 
-  scd.IsCustodial AS contactIsCustodialFlg,
-  scd.IsEmergency AS contactIsEmergencyFlg,
-  scd.LivesWithFlg AS contactLivesWithFlg,
-  scd.ReceivesMailFlg AS contactReceivesMailFlg,
-  p.FirstName AS contactFirstName,
-  p.MiddleName AS contactMiddleName,
-  p.LastName AS contactLastName,
-  LOWER(ocm.OriginalContactType) AS contactType,
-  LOWER(cspt.Code) AS phoneType,
-  ppna.PhoneNumberAsEntered AS contactPhoneNum,
-  ppna.PhoneNumberPriorityOrder,
-  LOWER(cset.Code) AS emailType,
-  emad.EmailAddress as contactEmailAddr,
-  peaa.EmailAddressPriorityOrder,
-  peaa.IsPrimaryEmailAddress
+  s.Street AS studentAddrStreet,
+  s.City AS studentAddrCity,
+  s.State AS studentAddrState,
+  s.Zip as studentAddrZip,
+  s.Mailing_Street AS studentMailAddrStreet,
+  s.Mailing_City AS studentMailAddrCity,
+  s.Mailing_State AS studentMailAddrState,
+  s.Mailing_Zip as studentMailAddrZip,
 
+  oca_m1.contactRelationshipType AS MotherRelationshipType, 
+  ci_m1.contactFirstName AS MotherFirstName,
+  ci_m1.contactMiddleName AS MotherMiddleName,
+  ci_m1.contactLastName AS MotherLastName,
+  oca_m1.contactIsCustodialFlg AS MotherIsCustodialFlg,
+  oca_m1.contactIsEmergencyFlg AS MotherIsEmergencyFlg,
+  oca_m1.contactLivesWithFlg AS MotherLivesWithFlg,
+  oca_m1.contactReceivesMailFlg AS MotherReceivesMailFlg,
+  oca_m1.contactSchoolPickupFlg AS MotherSchoolPickupFlg,
+  ci_m1.contactEmailAddr AS MotherEmailAddress,
+  ci_m1.HomePhoneNum AS MotherHomePhone,
+  ci_m1.MobilePhoneNum AS MotherMobilePhone,
+  ci_m1.WorkPhoneNum AS MotherWorkPhone,
+  ci_m1.contactAddrStreet AS MotherAddrStreet,
+  ci_m1.contactAddrUnit AS MotherAddrUnit,
+  ci_m1.contactAddrLineTwo AS MotherAddrLineTwo,
+  ci_m1.contactAddrCity AS MotherAddrCity,
+  ci_m1.contactAddrState AS MotherAddrState,
+  ci_m1.contactAddrPostalCode as MotherAddrPostalCode,
+  
+  oca_f2.contactRelationshipType AS FatherRelationshipType, 
+  ci_f2.contactFirstName AS FatherFirstName,
+  ci_f2.contactMiddleName AS FatherMiddleName,
+  ci_f2.contactLastName AS FatherLastName,
+  oca_f2.contactIsCustodialFlg AS FatherIsCustodialFlg,
+  oca_f2.contactIsEmergencyFlg AS FatherIsEmergencyFlg,
+  oca_f2.contactLivesWithFlg AS FatherLivesWithFlg,
+  oca_f2.contactReceivesMailFlg AS FatherReceivesMailFlg,
+  oca_f2.contactSchoolPickupFlg AS FatherSchoolPickupFlg,
+  ci_f2.contactEmailAddr AS FatherEmailAddress,
+  ci_f2.HomePhoneNum AS FatherHomePhone,
+  ci_f2.MobilePhoneNum AS FatherMobilePhone,
+  ci_f2.WorkPhoneNum AS FatherWorkPhone,
+  ci_f2.contactAddrStreet AS FatherAddrStreet,
+  ci_f2.contactAddrUnit AS FatherAddrUnit,
+  ci_f2.contactAddrLineTwo AS FatherAddrLineTwo,
+  ci_f2.contactAddrCity AS FatherAddrCity,
+  ci_f2.contactAddrState AS FatherAddrState,
+  ci_f2.contactAddrPostalCode AS FatherAddrPostalCode,
+    
+  oca_g3.contactRelationshipType AS GuardianRelationshipType, 
+  ci_g3.contactFirstName AS GuardianFirstName,
+  ci_g3.contactMiddleName AS GuardianMiddleName,
+  ci_g3.contactLastName AS GuardianLastName,
+  oca_g3.contactIsCustodialFlg AS GuardianIsCustodialFlg,
+  oca_g3.contactIsEmergencyFlg AS GuardianIsEmergencyFlg,
+  oca_g3.contactLivesWithFlg AS GuardianLivesWithFlg,
+  oca_g3.contactReceivesMailFlg AS GuardianReceivesMailFlg,
+  oca_g3.contactSchoolPickupFlg AS GuardianSchoolPickupFlg,
+  ci_g3.contactEmailAddr AS GuardianEmailAddress,
+  ci_g3.HomePhoneNum AS GuardianHomePhone,
+  ci_g3.MobilePhoneNum AS GuardianMobilePhone,
+  ci_g3.WorkPhoneNum AS GuardianWorkPhone,
+  ci_g3.contactAddrStreet AS GuardianAddrStreet,
+  ci_g3.contactAddrUnit AS GuardianAddrUnit,
+  ci_g3.contactAddrLineTwo AS GuardianAddrLineTwo,
+  ci_g3.contactAddrCity AS GuardianAddrCity,
+  ci_g3.contactAddrState AS GuardianAddrState,
+  ci_g3.contactAddrPostalCode AS GuardianAddrPostalCode,
+    
 FROM Students s
 
 LEFT OUTER JOIN 
   ( PSM_StudentContact psc 
   
-    INNER JOIN PSM_StudentContactType psct ON psc.StudentContactTypeId= psct.Id 
-      AND psct.Name='Self' 
+    INNER JOIN PSM_StudentContactType psct
+            ON psc.StudentContactTypeId= psct.Id 
+           AND psct.Name LIKE 'Self' 
   
     INNER JOIN Sync_StudentMap ssm ON psc.StudentId = ssm.StudentId
+    
   ) ON s.Dcid = ssm.StudentsDcid 
 
-LEFT OUTER JOIN StudentContactAssoc sca ON s.Dcid = sca.StudentDcid
-LEFT OUTER JOIN Person p ON sca.PersonId = p.id
-LEFT OUTER JOIN StudentContactDetail scd ON sca.StudentContactAssocId = scd.StudentContactAssocId
-LEFT OUTER JOIN CodeSet csrel ON scd.RelationshipTypeCodeSetId = csrel.CodeSetId
-LEFT OUTER JOIN OriginalContactMap ocm ON sca.StudentContactAssocid = ocm.StudentContactAssocId
+LEFT OUTER JOIN
+  ( (SELECT * FROM OriginalContactAssoc) oca_m1
 
-LEFT OUTER JOIN PersonPhoneNumberAssoc ppna ON  p.Id = ppna.PersonId
-LEFT OUTER JOIN PhoneNumber pn ON ppna.PhoneNumberId = pn.PhoneNumberID
-LEFT OUTER JOIN CodeSet cspt ON ppna.PhoneTypeCodeSetID = cspt.CodeSetID
-LEFT OUTER JOIN PersonEmailAddressAssoc peaa ON  p.Id = peaa.PersonId
-LEFT OUTER JOIN EmailAddress emad ON peaa.EmailAddressId = emad.EmailAddressId
-LEFT OUTER JOIN CodeSet cset ON peaa.EmailTypeCodeSetID = cset.CodeSetID
+    INNER JOIN (SELECT * FROM ContactInfo) ci_m1 ON oca_m1.PersonId = ci_m1.PersonId
 
-WHERE (LOWER(ocm.OriginalContactType) IN ('mother','father','guardian')
-       OR ocm.OriginalContactType IS NULL)
-  AND (LOWER(cspt.Code) IN ('home','mobile','work') OR cspt.Code IS NULL)
-  AND (LOWER(cset.Code) IN ('current') OR cset.Code IS NULL)
+  ) ON s.Dcid = oca_m1.StudentDcid
+   AND oca_m1.OriginalContactType LIKE 'mother'
 
-  AND ((ppna.PersonPhoneNumberAssocId IS NULL) OR 
-       (p.Id, ppna.PhoneTypeCodeSetID, (ppna.PhoneNumberPriorityOrder - (ppna.IsPreferred * 100000)))
-        IN (SELECT PersonId, PhoneTypeCodeSetID, MIN(PhoneNumberPriorityOrder - (IsPreferred * 100000))
-            FROM PersonPhoneNumberAssoc GROUP BY PersonId, PhoneTypeCodeSetID))
+ LEFT OUTER JOIN
+  ( (SELECT * FROM OriginalContactAssoc) oca_f2
 
-  AND (peaa.PersonEmailAddressAssocId IS NULL OR
-       (p.Id, peaa.EmailTypeCodeSetID, (peaa.EmailAddressPriorityOrder - (peaa.IsPrimaryEmailAddress * 100000)))
-        IN (SELECT PersonId, EmailTypeCodeSetID, MIN(EmailAddressPriorityOrder - (IsPrimaryEmailAddress * 100000))
-            FROM PersonEmailAddressAssoc GROUP BY PersonId, EmailTypeCodeSetID))
-)
+    INNER JOIN (SELECT * FROM ContactInfo) ci_f2 ON oca_f2.PersonId = ci_f2.PersonId
 
-GROUP BY studentDcid, enrollStat, studentNum, lname, fname, studentEmail, 
-  gender, schoolNum, gradeLvl, homeRm, nextSchool, nextGrade, studentHomePhone
+  ) ON s.Dcid = oca_f2.StudentDcid
+   AND oca_f2.OriginalContactType LIKE 'father'  
+ 
+ LEFT OUTER JOIN
+  ( (SELECT * FROM OriginalContactAssoc) oca_g3
+
+    INNER JOIN (SELECT * FROM ContactInfo) ci_g3 ON oca_g3.PersonId = ci_g3.PersonId
+
+  ) ON s.Dcid = oca_g3.StudentDcid
+   AND oca_g3.OriginalContactType LIKE 'guardian'
+
+ORDER BY s.Student_Number ASC, s.Dcid ASC
 
 			]]>
         </sql>
