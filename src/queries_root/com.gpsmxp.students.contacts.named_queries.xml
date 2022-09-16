@@ -443,7 +443,6 @@ SELECT
   ci_e3.contactAddrState AS Emergency3AddrState,
   ci_e3.contactAddrPostalCode AS Emergency3AddrPostalCode
     
-    
 FROM Students s
 
 LEFT OUTER JOIN 
@@ -504,6 +503,8 @@ LEFT OUTER JOIN
 
   ) ON s.Dcid = oca_e3.StudentDcid
    AND oca_e3.OriginalContactType LIKE 'emergency3'
+
+ORDER BY s.Student_Number ASC, s.Dcid ASC
 
 			]]>
         </sql>
@@ -566,8 +567,18 @@ LEFT OUTER JOIN
         <sql>
 			<![CDATA[				
 SELECT
-  studentDcid, enrollStat, studentNum, lname, fname, studentEmail, 
-  gender, schoolNum, gradeLvl, homeRm, nextSchool, nextGrade, 
+  studentDcid,
+  enrollStat,
+  studentNum,
+  lname, 
+  fname,
+  studentEmail, 
+  gender,
+  schoolNum,
+  gradeLvl,
+  homeRm,
+  nextSchool,
+  nextGrade, 
   studentHomePhone,
 
   MIN(CASE WHEN (contactType='mother') THEN contactRelationshipType END) AS MotherRelationshipType,

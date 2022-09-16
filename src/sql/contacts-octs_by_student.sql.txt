@@ -360,3 +360,5 @@ LEFT OUTER JOIN
 
   ) ON s.Dcid = oca_e3.StudentDcid
    AND oca_e3.OriginalContactType LIKE 'emergency3'
+
+ORDER BY s.Student_Number ASC, s.Dcid ASC
