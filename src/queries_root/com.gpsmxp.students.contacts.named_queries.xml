@@ -742,14 +742,6 @@ SELECT
   s.Next_School AS nextSchool,
   s.Sched_NextYearGrade AS nextGrade,
   s.Home_Phone AS studentHomePhone,
-  s.Street AS studentAddrStreet,
-  s.City AS studentAddrCity,
-  s.State AS studentAddrState,
-  s.Zip as studentAddrZip,
-  s.Mailing_Street AS studentMailAddrStreet,
-  s.Mailing_City AS studentMailAddrCity,
-  s.Mailing_State AS studentMailAddrState,
-  s.Mailing_Zip as studentMailAddrZip,
 
   oca_m1.contactRelationshipType AS MotherRelationshipType, 
   ci_m1.contactFirstName AS MotherFirstName,
@@ -764,12 +756,6 @@ SELECT
   ci_m1.HomePhoneNum AS MotherHomePhone,
   ci_m1.MobilePhoneNum AS MotherMobilePhone,
   ci_m1.WorkPhoneNum AS MotherWorkPhone,
-  ci_m1.contactAddrStreet AS MotherAddrStreet,
-  ci_m1.contactAddrUnit AS MotherAddrUnit,
-  ci_m1.contactAddrLineTwo AS MotherAddrLineTwo,
-  ci_m1.contactAddrCity AS MotherAddrCity,
-  ci_m1.contactAddrState AS MotherAddrState,
-  ci_m1.contactAddrPostalCode as MotherAddrPostalCode,
   
   oca_f2.contactRelationshipType AS FatherRelationshipType, 
   ci_f2.contactFirstName AS FatherFirstName,
@@ -784,12 +770,6 @@ SELECT
   ci_f2.HomePhoneNum AS FatherHomePhone,
   ci_f2.MobilePhoneNum AS FatherMobilePhone,
   ci_f2.WorkPhoneNum AS FatherWorkPhone,
-  ci_f2.contactAddrStreet AS FatherAddrStreet,
-  ci_f2.contactAddrUnit AS FatherAddrUnit,
-  ci_f2.contactAddrLineTwo AS FatherAddrLineTwo,
-  ci_f2.contactAddrCity AS FatherAddrCity,
-  ci_f2.contactAddrState AS FatherAddrState,
-  ci_f2.contactAddrPostalCode AS FatherAddrPostalCode,
     
   oca_g3.contactRelationshipType AS GuardianRelationshipType, 
   ci_g3.contactFirstName AS GuardianFirstName,
@@ -803,13 +783,7 @@ SELECT
   ci_g3.contactEmailAddr AS GuardianEmailAddress,
   ci_g3.HomePhoneNum AS GuardianHomePhone,
   ci_g3.MobilePhoneNum AS GuardianMobilePhone,
-  ci_g3.WorkPhoneNum AS GuardianWorkPhone,
-  ci_g3.contactAddrStreet AS GuardianAddrStreet,
-  ci_g3.contactAddrUnit AS GuardianAddrUnit,
-  ci_g3.contactAddrLineTwo AS GuardianAddrLineTwo,
-  ci_g3.contactAddrCity AS GuardianAddrCity,
-  ci_g3.contactAddrState AS GuardianAddrState,
-  ci_g3.contactAddrPostalCode AS GuardianAddrPostalCode,
+  ci_g3.WorkPhoneNum AS GuardianWorkPhone
     
 FROM Students s
 
