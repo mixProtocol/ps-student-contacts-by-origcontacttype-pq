@@ -168,6 +168,8 @@ SELECT
   s.SchoolID AS schoolNum,
   s.Grade_Level AS gradeLvl,
   s.Home_room AS homeRm,
+  s.Next_School AS nextSchool,
+  s.Sched_NextYearGrade AS nextGrade,
   s.Home_Phone AS studentHomePhone,
   s.Street AS studentAddrStreet,
   s.City AS studentAddrCity,
@@ -236,7 +238,68 @@ SELECT
   ci_g3.contactAddrLineTwo AS GuardianAddrLineTwo,
   ci_g3.contactAddrCity AS GuardianAddrCity,
   ci_g3.contactAddrState AS GuardianAddrState,
-  ci_g3.contactAddrPostalCode AS GuardianAddrPostalCode
+  ci_g3.contactAddrPostalCode AS GuardianAddrPostalCode,
+
+  oca_e1.contactRelationshipType AS Emergency1RelationshipType, 
+  ci_e1.contactFirstName AS Emergency1FirstName,
+  ci_e1.contactMiddleName AS Emergency1MiddleName,
+  ci_e1.contactLastName AS Emergency1LastName,
+  oca_e1.contactIsCustodialFlg AS Emergency1IsCustodialFlg,
+  oca_e1.contactIsEmergencyFlg AS Emergency1IsEmergencyFlg,
+  oca_e1.contactLivesWithFlg AS Emergency1LivesWithFlg,
+  oca_e1.contactReceivesMailFlg AS Emergency1ReceivesMailFlg,
+  oca_e1.contactSchoolPickupFlg AS Emergency1SchoolPickupFlg,
+  ci_e1.contactEmailAddr AS Emergency1EmailAddress,
+  ci_e1.HomePhoneNum AS Emergency1HomePhone,
+  ci_e1.MobilePhoneNum AS Emergency1MobilePhone,
+  ci_e1.WorkPhoneNum AS Emergency1WorkPhone,
+  ci_e1.contactAddrStreet AS Emergency1AddrStreet,
+  ci_e1.contactAddrUnit AS Emergency1AddrUnit,
+  ci_e1.contactAddrLineTwo AS Emergency1AddrLineTwo,
+  ci_e1.contactAddrCity AS Emergency1AddrCity,
+  ci_e1.contactAddrState AS Emergency1AddrState,
+  ci_e1.contactAddrPostalCode as Emergency1AddrPostalCode,
+  
+  oca_e2.contactRelationshipType AS Emergency2RelationshipType, 
+  ci_e2.contactFirstName AS Emergency2FirstName,
+  ci_e2.contactMiddleName AS Emergency2MiddleName,
+  ci_e2.contactLastName AS Emergency2LastName,
+  oca_e2.contactIsCustodialFlg AS Emergency2IsCustodialFlg,
+  oca_e2.contactIsEmergencyFlg AS Emergency2IsEmergencyFlg,
+  oca_e2.contactLivesWithFlg AS Emergency2LivesWithFlg,
+  oca_e2.contactReceivesMailFlg AS Emergency2ReceivesMailFlg,
+  oca_e2.contactSchoolPickupFlg AS Emergency2SchoolPickupFlg,
+  ci_e2.contactEmailAddr AS Emergency2EmailAddress,
+  ci_e2.HomePhoneNum AS Emergency2HomePhone,
+  ci_e2.MobilePhoneNum AS Emergency2MobilePhone,
+  ci_e2.WorkPhoneNum AS Emergency2WorkPhone,
+  ci_e2.contactAddrStreet AS Emergency2AddrStreet,
+  ci_e2.contactAddrUnit AS Emergency2AddrUnit,
+  ci_e2.contactAddrLineTwo AS Emergency2AddrLineTwo,
+  ci_e2.contactAddrCity AS Emergency2AddrCity,
+  ci_e2.contactAddrState AS Emergency2AddrState,
+  ci_e2.contactAddrPostalCode AS Emergency2AddrPostalCode,
+    
+  oca_e3.contactRelationshipType AS Emergency3RelationshipType, 
+  ci_e3.contactFirstName AS Emergency3FirstName,
+  ci_e3.contactMiddleName AS Emergency3MiddleName,
+  ci_e3.contactLastName AS Emergency3LastName,
+  oca_e3.contactIsCustodialFlg AS Emergency3IsCustodialFlg,
+  oca_e3.contactIsEmergencyFlg AS Emergency3IsEmergencyFlg,
+  oca_e3.contactLivesWithFlg AS Emergency3LivesWithFlg,
+  oca_e3.contactReceivesMailFlg AS Emergency3ReceivesMailFlg,
+  oca_e3.contactSchoolPickupFlg AS Emergency3SchoolPickupFlg,
+  ci_e3.contactEmailAddr AS Emergency3EmailAddress,
+  ci_e3.HomePhoneNum AS Emergency3HomePhone,
+  ci_e3.MobilePhoneNum AS Emergency3MobilePhone,
+  ci_e3.WorkPhoneNum AS Emergency3WorkPhone,
+  ci_e3.contactAddrStreet AS Emergency3AddrStreet,
+  ci_e3.contactAddrUnit AS Emergency3AddrUnit,
+  ci_e3.contactAddrLineTwo AS Emergency3AddrLineTwo,
+  ci_e3.contactAddrCity AS Emergency3AddrCity,
+  ci_e3.contactAddrState AS Emergency3AddrState,
+  ci_e3.contactAddrPostalCode AS Emergency3AddrPostalCode
+    
     
 FROM Students s
 
@@ -273,4 +336,28 @@ LEFT OUTER JOIN
     INNER JOIN ContactInfo ci_g3 ON oca_g3.PersonId = ci_g3.PersonId
 
   ) ON s.Dcid = oca_g3.StudentDcid
-   AND oca_g3.OriginalContactType COLLATE binary_ci LIKE 'guardian'  
+   AND oca_g3.OriginalContactType COLLATE binary_ci LIKE 'guardian'
+
+LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_e1
+
+    INNER JOIN ContactInfo ci_e1 ON oca_e1.PersonId = ci_e1.PersonId
+
+  ) ON s.Dcid = oca_e1.StudentDcid
+   AND oca_e1.OriginalContactType COLLATE binary_ci LIKE 'emergency1'
+
+ LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_e2
+
+    INNER JOIN ContactInfo ci_e2 ON oca_e2.PersonId = ci_e2.PersonId
+
+  ) ON s.Dcid = oca_e2.StudentDcid
+   AND oca_e2.OriginalContactType COLLATE binary_ci LIKE 'emergency2'
+ 
+ LEFT OUTER JOIN
+  ( OriginalContactAssoc oca_e3
+
+    INNER JOIN ContactInfo ci_e3 ON oca_e3.PersonId = ci_e3.PersonId
+
+  ) ON s.Dcid = oca_e3.StudentDcid
+   AND oca_e3.OriginalContactType COLLATE binary_ci LIKE 'emergency3'
